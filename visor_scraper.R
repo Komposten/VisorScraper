@@ -58,7 +58,6 @@ filter.global.stats <- function(match.data)
 				date_and_time = x$created_at,
 				date = x$created_at %>% as.Date,
 				days_since_first_match = make.relative(x$created_at, match.data),
-				sr = x$user$overwatch_sr,
 				impact_score = x$impact_score,
 				teamplay_score = x$teamplay_score,
 				ultimate_score = x$ultimate_score,
