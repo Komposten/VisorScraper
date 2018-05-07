@@ -66,27 +66,71 @@ filter.global.stats <- function(match.data)
 }
 
 
-filter.hero <- function(heroName, match.data)
+# filter.hero <- function(heroName, match.data)
+# {
+# 	if (!is.character(heroName))
+# 	{
+# 		stop("heroName must be a character!")
+# 	}
+# 	
+# 	per.hero <- lapply(match.data, function(x)
+# 		{
+# 			date.full = data.frame(date_and_time = rep(x$match$created_at, times = nrow(x$heroStats)))
+# 			date.short = data.frame(date = date.full[,1] %>% as.Date)
+# 			days.since.first.match = data.frame(days_since_first_match = date.full[,1] %>% make.relative(match.data))
+# 			cbind(date.full, date.short, days.since.first.match, x$heroStats)
+# 		})
+# 		
+# 	lapply(per.hero, FUN = function(x) x[x$hero == heroName,]) %>%		# Remove all rows rows with the wrong heroName
+# 		{.[lapply(., nrow) > 0]} %>%														# Remove all matches where the specified hero wasn't played (i.e. no rows)
+# 		lapply(FUN = flatten) %>%																# Flatten the nested data frames (required for rbind to work)
+# 		lapply(FUN = function(x) x[, !is.na(x[1,])]) %>%				# Remove all NA values (hero-specific stats for other heroes)
+# 		do.call("rbind", .) %>%																	# rbind everything into a single data frame
+# 		return
+# }
+
+
+filter.heroes <- function(match.data)
 {
-	if (!is.character(heroName))
-	{
-		stop("heroName must be a character!")
-	}
-	
-	per.hero <- lapply(match.data, function(x)
-		{
-			date.full = data.frame(date_and_time = rep(x$match$created_at, times = nrow(x$heroStats)))
-			date.short = data.frame(date = date.full[,1] %>% as.Date)
-			days.since.first.match = data.frame(days_since_first_match = date.full[,1] %>% make.relative(match.data))
-			cbind(date.full, date.short, days.since.first.match, x$heroStats)
-		})
-		
-	lapply(per.hero, FUN = function(x) x[x$hero == heroName,]) %>%		# Remove all rows rows with the wrong heroName
-		{.[lapply(., nrow) > 0]} %>%														# Remove all matches where the specified hero wasn't played (i.e. no rows)
-		lapply(FUN = flatten) %>%																# Flatten the nested data frames (required for rbind to work)
-		lapply(FUN = function(x) x[, !is.na(x[1,])]) %>%				# Remove all NA values (hero-specific stats for other heroes)
-		do.call("rbind", .) %>%																	# rbind everything into a single data frame
-		return
+  require(plyr)
+  
+  # Extract the hero stats and prepend date information
+  per.hero <- lapply(match.data, function(x)
+  {
+    date.full = data.frame(date_and_time = rep(x$match$created_at, times = nrow(x$heroStats)))
+    date.short = data.frame(date = date.full[,1] %>% as.Date)
+    days.since.first.match = data.frame(days_since_first_match = date.full[,1] %>% make.relative(match.data))
+    cbind(date.full, date.short, days.since.first.match, x$heroStats)
+  }) %>%
+    lapply(FUN = flatten)	# Flatten the nested data frames (required for rbind to work)
+  
+  heroes <- list()
+  
+  # Go through all heroes in each match and add them to their respective data frames in the heroes list.
+  for (i in seq_along(per.hero))
+  {
+    hero.data = per.hero[[i]]
+    for (row in 1:nrow(hero.data))
+    {
+      row.data <- hero.data[row,]
+      hero.name <- as.character(row.data["hero"])
+      
+      df <- heroes[[hero.name]]
+      
+      if (is.null(df))
+      {
+        df <- as.data.frame(row.data)
+      }
+      else
+      {
+        df <- rbind.fill(df, row.data)
+      }
+      
+      heroes[[hero.name]] <- df
+    }
+  }
+  
+  lapply(heroes, FUN = function(x) x[, !is.na(x[1,])]) %>% return # Remove NA columns and return.
 }
 
 
@@ -98,24 +142,20 @@ make.relative <- function(visor.date, match.data)
 }
 
 
-scrape.match.data <- function(dashboardFile, heroes, outputFolder = NULL)
+scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 {
-	# TODO Look for all heroes by default, don't save anything for those that have no matches.
 	# TODO At the end, print the total number of scraped matches, as well as the number each hero was found in.
-	# TODO Possibly rewrite the "filter.hero" function to handle all heroes at once (create data frames -> for each match move the hero data to the correct df's)
-	
+  
 	message("Starting scraping job...")
 	matches <- scrape.matches(dashboardFile)
+	assign("raw.stats", matches, pos = globalenv())
 	
 	message("Extracting match stats...")
 	match.stats <<- filter.global.stats(matches)
 	
 	message("Extracting hero-specific stats...")
-	hero.stats <- sapply(heroes, FUN = function(x)
-		{
-			stats <- filter.hero(x, matches)
-			assign(x, stats, pos = globalenv())
-		})
+	hero.stats = filter.heroes(matches)
+	assign("hero.stats", hero.stats, pos = globalenv())
 	
 	if (!is.null(outputFolder))
 	{
@@ -131,7 +171,7 @@ scrape.match.data <- function(dashboardFile, heroes, outputFolder = NULL)
 	}
 	
 	message("Scraping job finished!")
-	message(paste0("Data has been stored in these variables: match.stats, ", paste(heroes, sep = ", ", collapse = ", ")), ".")
+	message("Data has been stored in these variables: match.stats (data frame) and hero.stats (list with one data frame per hero).")
 	if (!is.null(outputFolder))
 	{
 		message(paste0("It has also been written to files with the same names in the folder ", outputFolder, "."))
@@ -139,4 +179,4 @@ scrape.match.data <- function(dashboardFile, heroes, outputFolder = NULL)
 }
 
 
-scrape.match.data("files/Visor.gg.html", c("mercy", "ana"), "output/")
+scrape.match.data("files/Visor.gg.html", "output/")
