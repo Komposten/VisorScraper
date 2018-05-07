@@ -4,7 +4,7 @@ VisorScraper is a R-based tool that scrapes Overwatch match data from [Visor.gg]
 ### How do I use VisorScraper?
 1) Download required files:
    1) [Download and install R](https://cran.r-project.org)
-   2) Download visor_scraper.R from this repository.
+   2) Download [visor_scraper.R](https://github.com/Komposten/VisorScraper/blob/master/visor_scraper.R) from this repository.
 2) Download your Visor.gg dashboard.
    1) Go to your [Visor.gg dashboard](https://visor.gg/visor/dashboard).
    2) Keep scrolling down until all matches you want to scrape have been loaded.
@@ -19,7 +19,15 @@ VisorScraper is a R-based tool that scrapes Overwatch match data from [Visor.gg]
    1) If you specified an output folder, it should now contain a number of .csv files.
    2) Additionally, the data is also stored in the R environment under the variables `match.stats` and `hero.stats`.
 
+#### Why must I download the Visor Dashboard HTML?
+This is an easy way to get access to a list of all matches that a user wants to scrape.
+
+It should be possible to let VisorScraper itself sign in to Visor.gg and scrape the Dashboard. However, I don't know exactly how to do this or if it is worth the trouble. This is especially because of the fact that Visor.gg's dashboard only loads 20 matches at first, and then requires you to scroll down for it to load further. I don't know if this can be achieved programmatically using R.
+
 ### Other useful information
 * VisorScraper works in a single thread and waits 0.1 second between each match, as to not spam Visor.gg with too many requests.
 * Matches that cannot be opened (e.g. because of server errors) and matches without stats (i.e. Visor messed up) will be ignored.
 * SR cannot currently be scraped in a reasonable way since Visor.gg does not store SR per match.
+
+### License
+This is free and unencumbered software released into the public domain. See [LICENSE](https://github.com/Komposten/VisorScraper/blob/master/LICENSE) for more information.
