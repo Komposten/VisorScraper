@@ -6,7 +6,12 @@ scrape.matches <- function(dashboardHtmlFile)
 	matches <- scrape(file = dashboardHtmlFile, parse = T) %>% {getNodeSet(doc = .[[1]], path = "//div[@class=\"_2-e0X\"]/div[3]/div[position()>1]/a/@href")}
 	
 	paste0("Scraping data from ", length(matches), " matches!") %>% message
-	match.data <- lapply(matches, FUN = scrape.match)
+	match.data <- lapply(seq_along(matches), FUN = function(index) 
+    {
+	    url <- matches[[index]]
+  	  paste0("Scraping match ", url, " [", index, "/", length(matches), "]") %>% print
+	    scrape.match(url)
+	  })
 	names(match.data) <- matches
 	
 	match.data <- match.data[lapply(match.data, length) > 0] %>% 	# Remove all empty list elements (invalid matches)
@@ -16,7 +21,7 @@ scrape.matches <- function(dashboardHtmlFile)
 				 length(match.data),
 				 " matches (",
 				 length(matches) - length(match.data),
-				 " were invalid or broken)") %>%
+				 " were invalid or broken)\n") %>%
 		message
 	
 	return(match.data)
@@ -28,15 +33,13 @@ scrape.match <- function(url)
 	require(jsonlite)
 	require(magrittr)
 	
-	paste0("Scraping match ", url) %>% print
-	
 	Sys.sleep(0.1)
 	
 	dom <- scrape(url = url, parse = T)
 	
 	if (getNodeSet(doc = dom[[1]], path = "//title", fun = xmlValue) %>% trimws %>% length == 0)
 	{
-		warning("Invalid match: ", url)
+		warning("Invalid match: ", url, " (broken URL, or the server is unreachable)")
 		return(data.frame())
 	}
 	
@@ -144,8 +147,6 @@ make.relative <- function(visor.date, match.data)
 
 scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 {
-	# TODO At the end, print the total number of scraped matches, as well as the number each hero was found in.
-  
 	message("Starting scraping job...")
 	matches <- scrape.matches(dashboardFile)
 	assign("raw.stats", matches, pos = globalenv())
@@ -159,7 +160,7 @@ scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 	
 	if (!is.null(outputFolder))
 	{
-		message(paste0("Saving to files in folder ", outputFolder))
+		message(paste0("Saving to files in folder \"", outputFolder, "\""))
 		
 		dir.create(outputFolder)
 		write.table(match.stats, file = paste0(outputFolder, "match.stats.csv"), quote = F, sep = ",", row.names = T, col.names = T)
@@ -170,11 +171,17 @@ scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 			})
 	}
 	
-	message("Scraping job finished!")
-	message("Data has been stored in these variables: match.stats (data frame) and hero.stats (list with one data frame per hero).")
+	message("\nScraping job finished!")
+	message(paste0("A total of ", nrow(match.stats), " matches were scraped. ",
+	               "Data is available for the following heroes:"))
+	sapply(names(hero.stats), function(x)
+	  {
+	    message(paste0("  ", x, ": ", hero.stats[[x]] %>% nrow, " matches"))
+	  })
+	message("\nThe data has been stored in two variables: match.stats (data frame) and hero.stats (list with one data frame per hero).")
 	if (!is.null(outputFolder))
 	{
-		message(paste0("It has also been written to files with the same names in the folder ", outputFolder, "."))
+		message(paste0("It has also been written to files in the folder \"", outputFolder, "\".\n"))
 	}
 }
 
