@@ -111,10 +111,12 @@ filter.heroes <- function(match.data)
   # Go through all heroes in each match and add them to their respective data frames in the heroes list.
   for (i in seq_along(per.hero))
   {
+    match.name = names(per.hero[i])
     hero.data = per.hero[[i]]
+    
     for (row in 1:nrow(hero.data))
     {
-      row.data <- hero.data[row,]
+      row.data <- cbind(match_name = match.name, hero.data[row,])
       hero.name <- as.character(row.data["hero"])
       
       df <- heroes[[hero.name]]
@@ -183,6 +185,5 @@ scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 		message(paste0("It has also been written to files in the folder \"", outputFolder, "\".\n"))
 	}
 }
-
 
 scrape.match.data("files/Visor.gg.html", "output/")
