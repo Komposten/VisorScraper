@@ -59,11 +59,9 @@ filter.global.stats <- function(match.data)
 				date = x$created_at %>% as.Date,
 				days_since_first_match = make.relative(x$created_at, match.data),
 				result = x$result,
-				map = x$map,
 				impact_score = x$impact_score,
 				teamplay_score = x$teamplay_score,
 				ultimate_score = x$ultimate_score,
-				
 				ults = x$ults_used)
 		}) %>%
 		do.call("rbind", .) %>% # rbind everything into a single data frame
