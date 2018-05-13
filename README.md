@@ -2,6 +2,7 @@
 ### What is VisorScraper?
 VisorScraper is a R-based tool that scrapes Overwatch match data from [Visor.gg](https://visor.gg). Visor.gg itself does not currently provide a way to view data from multiple matches at once in a convenient way (e.g. as graphs of stats vs. date), nor does it provide an API to easily access match data. This tool automatically scrapes match data from all matches present on your Visor Dashboard and compiles it into a number of tables (one with overall match data for each match, and one for each hero and match).
 ### How do I use VisorScraper?
+**NOTE: Downloading data from Visor requires permission from the Visor team. See the [Terms of Use](https://docsend.com/view/8ade7sa) for more information.**
 1) Download required files:
    1) [Download and install R](https://cran.r-project.org)
    2) Download [visor_scraper.R](https://github.com/Komposten/VisorScraper/blob/master/visor_scraper.R) from this repository.
