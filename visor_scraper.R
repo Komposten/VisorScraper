@@ -9,6 +9,11 @@ scrape.matches <- function(dashboardHtmlFile)
 	match.data <- lapply(seq_along(matches), FUN = function(index) 
     {
 	    url <- matches[[index]]
+	    if (exists("raw.stats") && url %in% names(raw.stats))
+	    {
+	      paste0("Skipping match ", url, " [", index, "/", length(matches), "] -- It already exists in the environment.") %>% print
+	      return(raw.stats[[url]])
+	    }
   	  paste0("Scraping match ", url, " [", index, "/", length(matches), "]") %>% print
 	    scrape.match(url)
 	  })
