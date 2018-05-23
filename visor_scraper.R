@@ -5,6 +5,9 @@ scrape.matches <- function(dashboardHtmlFile)
 	
 	matches <- scrape(file = dashboardHtmlFile, parse = T) %>% {getNodeSet(doc = .[[1]], path = "//div[@class=\"_2-e0X\"]/div[3]/div[position()>1]/a/@href")}
 	
+  scrape.counter <- 0
+	skip.counter <- 0
+  
 	paste0("Scraping data from ", length(matches), " matches!") %>% message
 	match.data <- lapply(seq_along(matches), FUN = function(index) 
     {
@@ -12,20 +15,31 @@ scrape.matches <- function(dashboardHtmlFile)
 	    if (exists("raw.stats") && url %in% names(raw.stats))
 	    {
 	      paste0("Skipping match ", url, " [", index, "/", length(matches), "] -- It already exists in the environment.") %>% print
+	      skip.counter <<- skip.counter + 1
 	      return(raw.stats[[url]])
 	    }
   	  paste0("Scraping match ", url, " [", index, "/", length(matches), "]") %>% print
+  	  scrape.counter <<- scrape.counter + 1
 	    scrape.match(url)
 	  })
 	names(match.data) <- matches
 	
 	match.data <- match.data[lapply(match.data, length) > 0] %>% 	# Remove all empty list elements (invalid matches)
 	{.[lapply(., function(x) { x$match$heroes %>% length}) > 0 ]}	# Remove matches with no heroes (i.e. broken matches)
-		
+	invalid.counter <- length(matches) - length(match.data)
+	
+	if (exists("raw.stats"))
+	{
+	  old.matches <- setdiff(names(raw.stats), names(match.data)) # Get names from raw.stats that are not present in match.data
+	  match.data <- c(match.data, raw.stats[old.matches])
+	}
+	
 	paste0("Successfully scraped ",
-				 length(match.data),
+				 scrape.counter - invalid.counter,
 				 " matches (",
-				 length(matches) - length(match.data),
+				 skip.counter,
+				 " were already scraped, and ",
+				 invalid.counter,
 				 " were invalid or broken)\n") %>%
 		message
 	
@@ -73,30 +87,6 @@ filter.global.stats <- function(match.data)
 		do.call("rbind", .) %>% # rbind everything into a single data frame
 		return
 }
-
-
-# filter.hero <- function(heroName, match.data)
-# {
-# 	if (!is.character(heroName))
-# 	{
-# 		stop("heroName must be a character!")
-# 	}
-# 	
-# 	per.hero <- lapply(match.data, function(x)
-# 		{
-# 			date.full = data.frame(date_and_time = rep(x$match$created_at, times = nrow(x$heroStats)))
-# 			date.short = data.frame(date = date.full[,1] %>% as.Date)
-# 			days.since.first.match = data.frame(days_since_first_match = date.full[,1] %>% make.relative(match.data))
-# 			cbind(date.full, date.short, days.since.first.match, x$heroStats)
-# 		})
-# 		
-# 	lapply(per.hero, FUN = function(x) x[x$hero == heroName,]) %>%		# Remove all rows rows with the wrong heroName
-# 		{.[lapply(., nrow) > 0]} %>%														# Remove all matches where the specified hero wasn't played (i.e. no rows)
-# 		lapply(FUN = flatten) %>%																# Flatten the nested data frames (required for rbind to work)
-# 		lapply(FUN = function(x) x[, !is.na(x[1,])]) %>%				# Remove all NA values (hero-specific stats for other heroes)
-# 		do.call("rbind", .) %>%																	# rbind everything into a single data frame
-# 		return
-# }
 
 
 filter.heroes <- function(match.data)
@@ -180,7 +170,7 @@ scrape.match.data <- function(dashboardFile, outputFolder = NULL)
 	}
 	
 	message("\nScraping job finished!")
-	message(paste0("A total of ", nrow(match.stats), " matches were scraped. ",
+	message(paste0("Data for a total of ", nrow(match.stats), " matches is available. ",
 	               "Data is available for the following heroes:"))
 	sapply(names(hero.stats), function(x)
 	  {
